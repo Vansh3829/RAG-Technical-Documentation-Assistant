@@ -9,9 +9,12 @@ keys, no hosted vector DB, nothing that needs a credit card.
 ## Stack I picked and why
 
 - **LLM: Groq (llama-3.1-8b-instant).** Free tier, fast, no card needed to sign up.
-- **Embeddings: sentence-transformers (all-MiniLM-L6-v2), running locally.** No
+- **Embeddings: fastembed (ONNX Runtime), running locally.** No
   API calls for embeddings at all — this made ingestion fast to iterate on and
-  meant I never had to worry about rate limits while testing.
+  meant I never had to worry about rate limits while testing. I originally
+  used sentence-transformers/PyTorch here, but switched to fastembed after
+  Render's free tier OOM'd on the PyTorch memory footprint (512MB limit) —
+  more on that below.
 - **Vector store: ChromaDB**, persisted to a local folder. It's embedded, so
   there's no separate DB server to run.
 - **Tavily** for the optional web-search fallback (free tier, 1k searches/month).
@@ -198,6 +201,36 @@ curl -X POST http://localhost:8000/ingest/urls \
 
 **GET /health** — basic liveness check.
 
+## Conversation memory (bonus)
+
+`/query` accepts an optional `session_id`. Leave it out (or send `null`) for a
+one-off, stateless question — that's the default and how everything above
+was tested. If you want follow-ups to work ("what about *that* library?"),
+send back the `session_id` the server returned from the previous call:
+
+```json
+{ "question": "How do I install LangGraph?" }
+```
+```json
+{ "answer": "...", "session_id": "3f9e2c1a-...", ... }
+```
+```json
+{ "question": "Does it support conditional edges too?", "session_id": "3f9e2c1a-..." }
+```
+
+On the second call, `analyze_query` gets the last `MAX_HISTORY_TURNS` (3, by
+default) question/answer pairs from that session and uses them to resolve
+"it" → LangGraph before rewriting the query for retrieval.
+
+I kept the implementation intentionally simple: it's an in-memory dict on the
+FastAPI process, keyed by `session_id`, capped at `MAX_SESSIONS_IN_MEMORY`
+sessions so it can't grow unbounded. That means history resets on server
+restart and won't work correctly if you ever ran multiple API processes
+behind a load balancer — both fine tradeoffs for a local/single-instance
+take-home project, not something I'd ship as-is for production. Streamlit
+handles this for you automatically (it remembers the session_id in
+`st.session_state` and has a "Start new conversation" button to reset it).
+
 ## Things I'd do differently with more time
 
 - Grade all retrieved chunks in a single structured-output call instead of
@@ -206,15 +239,25 @@ curl -X POST http://localhost:8000/ingest/urls \
   for one thing at a time than to get a clean parseable JSON array back for
   four things at once — but it does mean more API calls per query than
   necessary.
-- Add actual multi-turn memory. Right now every `/query` call is stateless.
-  LangGraph has checkpointer support that would make a `session_id` param
-  pretty straightforward to add — just didn't get to it.
 - The `RELEVANCE_SCORE_THRESHOLD` setting in `config.py` is there but unused —
   I'd like to combine the vector similarity score with the LLM's relevance
   verdict rather than relying on the LLM call alone.
 - PDF ingestion. Right now it's markdown/text/HTML only.
 - A basic response cache, mostly so repeated demo/test questions don't burn
   through Groq calls unnecessarily.
+- The conversation memory is deliberately minimal right now (see below) —
+  in-memory only, and it only feeds into query rewriting, not the final
+  generation prompt. With more time I'd feed relevant history into
+  `generate` too, and back the session store with something that survives a
+  restart (Redis would be the obvious free-tier-friendly option).
+- Worth calling out since it actually happened during deployment: my first
+  attempt at deploying to Render's free tier (512MB RAM) OOM'd, because
+  sentence-transformers pulls in PyTorch, and PyTorch alone is heavy enough
+  to blow past that limit in a small container. Swapped to `fastembed`
+  (ONNX Runtime, no PyTorch) and it fit comfortably. Same idea — local, free,
+  no API key — just a lighter runtime. If you're running this only locally
+  with plenty of RAM, either would've worked fine; this only bit me because
+  of the free-tier hosting constraint.
 
 ## Assumptions I made
 

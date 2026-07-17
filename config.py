@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.1-8b-instant"
     LLM_TEMPERATURE: float = 0.0
 
-    # --- Embeddings (fully local, no API key, no cost) ---
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # --- Embeddings (fully local, no API key, no cost -- ONNX via fastembed, not PyTorch) ---
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
 
     # --- Vector store ---
     CHROMA_PERSIST_DIR: str = "./chroma_db"

@@ -13,8 +13,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Pre-download the embedding model at build time so it's cached in the image
-# and the first request doesn't pay the download cost.
-RUN python -c "from langchain_huggingface import HuggingFaceEmbeddings; HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')"
+# and the first request doesn't pay the download cost. Using fastembed
+# (ONNX Runtime) instead of sentence-transformers/PyTorch keeps this small
+# enough to run comfortably in a 512MB free-tier container.
+RUN python -c "from langchain_community.embeddings import FastEmbedEmbeddings; FastEmbedEmbeddings(model_name='BAAI/bge-small-en-v1.5')"
 
 EXPOSE 8000
 
