@@ -1,0 +1,5 @@
+https://raw.githubusercontent.com/fastapi/fastapi/master/README.md
+https://raw.githubusercontent.com/pydantic/pydantic/main/README.md
+https://raw.githubusercontent.com/langchain-ai/langgraph/main/README.md
+https://raw.githubusercontent.com/chroma-core/chroma/main/README.md
+https://raw.githubusercontent.com/psf/requests/main/README.md
