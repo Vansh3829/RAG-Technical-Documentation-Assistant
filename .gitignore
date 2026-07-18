@@ -3,6 +3,7 @@ __pycache__/
 .env
 chroma_db/
 feedback.db
+.fastembed_cache/
 .venv/
 venv/
 *.egg-info/

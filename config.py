@@ -23,6 +23,14 @@ class Settings(BaseSettings):
 
     # --- Embeddings (fully local, no API key, no cost -- ONNX via fastembed, not PyTorch) ---
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    # Explicit, non-/tmp cache dir. fastembed defaults to a /tmp-based cache,
+    # and most hosting platforms (Render included) mount /tmp fresh at
+    # container runtime, separate from whatever was written there during the
+    # Docker build -- so a build-time "pre-download" into the default cache
+    # silently gets thrown away. Pointing this at a path under the app
+    # directory instead means the same files baked in at build time are
+    # actually still there when the container starts.
+    EMBEDDING_CACHE_DIR: str = "./.fastembed_cache"
 
     # --- Vector store ---
     CHROMA_PERSIST_DIR: str = "./chroma_db"

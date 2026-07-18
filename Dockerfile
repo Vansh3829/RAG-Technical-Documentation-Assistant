@@ -18,7 +18,14 @@ COPY . .
 # NOT langchain_community.embeddings.FastEmbedEmbeddings, which has a bug
 # that silently no-ops instead of actually downloading/initializing the
 # model, which is why this step was previously not actually caching anything.
-RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', threads=1)"
+#
+# cache_dir is explicit and matches EMBEDDING_CACHE_DIR in config.py exactly
+# (./.fastembed_cache, resolved from WORKDIR /app). This matters: fastembed's
+# *default* cache dir lives under /tmp, and most hosting platforms (Render
+# included) mount /tmp fresh at container runtime -- separate from whatever
+# was written there during this build step -- so without an explicit,
+# non-/tmp path here, this "pre-download" would silently do nothing useful.
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', threads=1, cache_dir='./.fastembed_cache')"
 
 EXPOSE 8000
 

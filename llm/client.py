@@ -56,7 +56,13 @@ def get_embeddings():
         def __init__(self, model_name: str):
             # threads=1: keeps ONNX Runtime's memory/CPU overhead low, which
             # matters on a constrained single-core free-tier container.
-            self._model = TextEmbedding(model_name=model_name, threads=1)
+            # cache_dir: explicit and non-default on purpose -- see the note
+            # on EMBEDDING_CACHE_DIR in config.py for why.
+            self._model = TextEmbedding(
+                model_name=model_name,
+                threads=1,
+                cache_dir=settings.EMBEDDING_CACHE_DIR,
+            )
 
         def embed_documents(self, texts):
             return [vec.tolist() for vec in self._model.embed(texts)]
