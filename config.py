@@ -4,6 +4,14 @@ Centralized application configuration.
 All values can be overridden via environment variables or a `.env` file
 in the project root. See `.env.example` for the full list of options.
 """
+import os
+
+# Silences ChromaDB's anonymous usage telemetry. Purely cosmetic -- without
+# this, a version mismatch between chromadb and posthog causes repeated
+# "Failed to send telemetry event ... capture() takes 1 positional argument
+# but 3 were given" lines in the logs. Harmless either way, but noisy.
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
